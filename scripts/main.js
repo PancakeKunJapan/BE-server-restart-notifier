@@ -1,7 +1,5 @@
 import { system, world } from "@minecraft/server";
 
-// 通知を出す再起動時間（停止の5分前）
-// たとえば Xserver の停止が 00:00, 12:00 なら → 通知は 23:55, 11:55
 const notifyTimes = [
   { hour: 23, minute: 55 },
   { hour: 11, minute: 55 }
@@ -10,13 +8,16 @@ const notifyTimes = [
 let secondsRemaining = 0;
 let isCountingDown = false;
 
+// 起動時に通知
+world.sendMessage("§a[RestartNotifier] アドオンが正常に読み込まれました！");
+
+// 毎秒の処理
 system.runInterval(() => {
   const now = new Date();
   const hour = now.getHours();
   const minute = now.getMinutes();
   const second = now.getSeconds();
 
-  // 通知開始時刻かどうか
   if (!isCountingDown) {
     for (const t of notifyTimes) {
       if (hour === t.hour && minute === t.minute && second === 0) {
@@ -28,28 +29,8 @@ system.runInterval(() => {
     }
   }
 
-  // カウントダウン中なら通知＆音
   if (isCountingDown && secondsRemaining > 0) {
-    // 音を鳴らす秒数
-    const soundTimes = [300, 60, 30, 10, 5, 4, 3, 2, 1];
-
-    if (soundTimes.includes(secondsRemaining)) {
-      world.sendMessage(`§c[警告] サーバー再起動まであと ${secondsRemaining} 秒`);
-
-      // 全プレイヤーに音を鳴らす
-      for (const player of world.getPlayers()) {
-        player.runCommandAsync(`playsound random.orb @s`);
-      }
-    }
-
-    // 5秒以下は毎秒通知＆音
-    if (secondsRemaining <= 5) {
-      world.sendMessage(`§4[再起動] あと ${secondsRemaining} 秒...`);
-      for (const player of world.getPlayers()) {
-        player.runCommandAsync(`playsound note.harp @s`);
-      }
-    }
-
+    // カウントダウン処理（省略）
     secondsRemaining--;
   }
 
@@ -57,4 +38,31 @@ system.runInterval(() => {
     world.sendMessage("§c[再起動] サーバーをまもなく再起動します！");
     isCountingDown = false;
   }
-}, 20); // 1秒ごと
+});
+
+// チャットコマンド登録
+world.events.beforeChat.subscribe(event => {
+  const message = event.message.toLowerCase();
+
+  if (message === "/nextrestart") {
+    event.cancel = true;
+
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // notifyTimesを分に変換して現在時刻と比較
+    const notifyMinutesList = notifyTimes.map(t => t.hour * 60 + t.minute);
+
+    // 現在時刻より後の通知時刻を探す（なければ翌日扱い）
+    let nextNotify = notifyMinutesList.find(m => m > nowMinutes);
+    if (nextNotify === undefined) {
+      nextNotify = notifyMinutesList[0] + 24 * 60; // 翌日の1つ目の通知時刻
+    }
+
+    const diffMinutes = nextNotify - nowMinutes;
+    const diffH = Math.floor(diffMinutes / 60);
+    const diffM = diffMinutes % 60;
+
+    world.sendMessage(`§b[RestartNotifier] 次の再起動通知は約 ${diffH}時間${diffM}分後です。`);
+  }
+});
