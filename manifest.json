@@ -1,0 +1,19 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "RestartNotifier",
+    "description": "通知を送る再起動アドオン",
+    "uuid": "7e3a3914-554b-47a0-acff-258c77ad8362",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "650303f7-68ae-4756-9c8c-a01eedcf3d2a",
+      "version": [1, 0, 0]
+    }
+  ],
+  "capabilities": ["script_engine"]
+}
