@@ -1,26 +1,33 @@
 import { system, world } from "@minecraft/server";
 
-const MINUTES = 5; // 再起動までの分数
-const RESTART_SECONDS = MINUTES * 60;
+let secondsRemaining = 0;
 
-let secondsRemaining = RESTART_SECONDS;
+// 停止予定時刻（24時間表記）
+// 停止予定時刻の5分前に通知を出す（ここでは23:55 と 11:55）
+const notifyTimes = [
+  { hour: 23, minute: 55 },
+  { hour: 11, minute: 55 }
+];
 
 system.runInterval(() => {
-  if (secondsRemaining === 300) {
-    world.sendMessage("§e[お知らせ] サーバーは5分後に再起動します！");
-  } else if (secondsRemaining === 60) {
-    world.sendMessage("§c[警告] サーバーは1分後に再起動します！");
-  } else if (secondsRemaining === 10) {
-    world.sendMessage("§4[警告] 再起動まで10秒！");
-  } else if (secondsRemaining <= 5 && secondsRemaining > 0) {
-    world.sendMessage(`§4[警告] ${secondsRemaining}秒前...`);
-  } else if (secondsRemaining === 0) {
-    world.sendMessage("§4[再起動] サーバーを再起動します！");
-    system.run(() => {
-      world.sendMessage("§7/server stop コマンドを実行してください（自動停止は不可）");
-      // 統合版には `server.stop()` のようなAPIがないため、外部スクリプトでstopする必要があります。
-    });
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const second = now.getSeconds();
+
+  // 時刻チェック
+  for (const t of notifyTimes) {
+    if (hour === t.hour && minute === t.minute && second === 0) {
+      world.sendMessage("§e[お知らせ] サーバーは5分後に自動再起動されます。");
+      secondsRemaining = 300;
+    }
   }
 
-  secondsRemaining--;
+  // カウントダウン通知（任意）
+  if (secondsRemaining > 0) {
+    if ([300, 60, 10, 5, 4, 3, 2, 1].includes(secondsRemaining)) {
+      world.sendMessage(`§c[警告] サーバー再起動まであと ${secondsRemaining} 秒`);
+    }
+    secondsRemaining--;
+  }
 }, 20); // 20 ticks = 1秒
